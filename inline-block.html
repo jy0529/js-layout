@@ -20,7 +20,10 @@
         <div class="inline-block-item"></div>
         <div class="inline-block-item"></div>
         <div class="inline-block-item"></div>
+        <!-- <div class="inline-block-item"></div> -->
+        <!-- <div class="inline-block-item"></div>
         <div class="inline-block-item"></div>
+        <div class="inline-block-item"></div> -->
     </div>
 
     <script>
@@ -32,9 +35,10 @@
          *          width: number
          *          height: number
          *          textAlign: left | center | right
-         *          verticalMiddle: top | center | baseline
+         *          verticalAlign: top | center
          *      methods:
-         *          align(textAlign: TextAlign)
+         *          textAlign(textAlign: TextAlign)
+         *          verticalAlign(verticalAlign: VerticalAlign)
          */
 
         /**
@@ -56,6 +60,11 @@
             RIGHT: 2,
         };
 
+        const VerticalAlign = {
+            TOP: 0,
+            CENTER: 1,
+        };
+
         // Layout
         class InlineBlockLayout {
             constructor(element, width, height, items) {
@@ -63,10 +72,11 @@
                 this.width = width;
                 this.height = height;
                 this.items = items;
-                this.textAlign = TextAlign.LEFT;      
+                this.align = TextAlign.LEFT;
+                this.vAlign = VerticalAlign.TOP;
 
                 this.initStyle();
-                this.initItemStyle();
+                this.initItems();
             }
             
             /*
@@ -77,36 +87,86 @@
                 this.element.style.height = `${this.height}px`;
             }
 
-            initItemStyle() {
-                const getLeft = (element) => {
-                    return parseInt(element.style.left);
-                };
-
-                const getTop = (element) => {
-                    return parseInt(element.style.top);
-                };
-
+            initItems() {
+                // 分行
+                const lines = [];
+                let line = [];
                 this.items.forEach((item, i) => {
+                    let prevLineItem = line[line.length - 1];
                     // 计算 left
-                    let left = i === 0 ? 0 : this.items[i - 1].width + getLeft(this.items[i - 1].element);
+                    let left = i === 0 ? 0 : prevLineItem.width + prevLineItem.left;
                     // 计算 top
                     let top = 0;
-                    const prevItemTop = i === 0 ? 0 : getTop(this.items[i - 1].element);
+                    const prevItemTop = i === 0 ? 0 : prevLineItem.top;
                     if (left + item.width > this.width) { // 需要换行
-                        top = prevItemTop + this.items[i - 1].height;
+                        lines.push(line);
+                        line = [];
+                        top = prevItemTop + prevLineItem.height;
                         left = 0;
                     } else {
                         top = prevItemTop;
                     }
-
-                    item.setStyle({
-                        position: 'absolute',
-                        left: `${left}px`,
-                        top: `${top}px`,
-                    });
+                    line.push({ ref: item, width: item.width, height: item.height, left, top, });
                 });
+                // 最后一行
+                if (line.length > 0) {
+                    lines.push(line);
+                }
+                this.lines = lines;
+
+                this.textAlign();
+                this.renderLines();
             }
-            
+
+            renderLines() {
+                // 按行渲染
+                for(let line of this.lines) {
+                    for(let item of line) {
+                        item.ref.setStyle({
+                            position: 'absolute',
+                            left: `${item.left}px`,
+                            top: `${item.top}px`,
+                        });
+                    }
+                }
+            }
+        
+            textAlign(align) {
+                if (align !== undefined) {
+                    this.align = align;
+                }
+
+                // 获取剩余空白的宽度
+                this.lines.forEach(line => {
+                    const lineItemWidthSum = line.reduce((acc, current) => (acc + current.width), 0);
+                    const restWidth = this.width - lineItemWidthSum;
+                    if (this.align === TextAlign.CENTER) {
+                        line.forEach(item => item.left = (item.left + restWidth / 2));
+                    } else if (this.align === TextAlign.RIGHT) {
+                        line.forEach(item => item.left = (item.left + restWidth));
+                    }
+                });
+                this.renderLines();
+            }
+
+            verticalAlign(align) {
+                if (align !== undefined) {
+                    this.vAlign = align;
+                }
+                
+                // 获取每行高度最大值
+                this.lines.forEach(line => {
+                    let maxHeight = -Infinity;
+                    line.forEach(item => maxHeight = Math.max(maxHeight, item.height));
+                    if (this.vAlign === VerticalAlign.CENTER) {
+                        line.forEach(item => {
+                            if (item.height === maxHeight) return;
+                            item.top = item.top + (maxHeight - item.height) / 2;
+                        });
+                    }
+                });
+                this.renderLines();
+            }
         }
 
         // LayoutItem
@@ -143,13 +203,17 @@
                 this.setStyle({ height: `${height}px` });
             }
         }
-
-        new InlineBlockLayout(document.querySelector('.container'), 800, 600, [
-            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[0], 200, 200),
+        const Layout = new InlineBlockLayout(document.querySelector('.container'), 800, 600, [
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[0], 200, 50),
             new InlineBlockItem(document.querySelectorAll('.inline-block-item')[1], 200, 200),
-            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[2], 200, 200),
-            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[3], 250, 200),
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[2], 200, 100),
+            // new InlineBlockItem(document.querySelectorAll('.inline-block-item')[3], 250, 200),
+            // new InlineBlockItem(document.querySelectorAll('.inline-block-item')[4], 250, 200),
+            // new InlineBlockItem(document.querySelectorAll('.inline-block-item')[5], 250, 200),
+            // new InlineBlockItem(document.querySelectorAll('.inline-block-item')[6], 250, 200),
         ]);
+        Layout.textAlign(TextAlign.CENTER);
+        Layout.verticalAlign(VerticalAlign.CENTER);
     </script>
 </body>
 </html>
