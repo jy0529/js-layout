@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .container {
+            position: relative;
+            outline: 1px solid blue;
+        }
+        .inline-block-item {
+            outline: 1px solid red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="inline-block-item"></div>
+        <div class="inline-block-item"></div>
+        <div class="inline-block-item"></div>
+        <div class="inline-block-item"></div>
+    </div>
+
+    <script>
+        /**
+         * InlineBlockLayout API
+         * 
+         *  InlineBlockLayout(elelment: HTMLElement, width: number, height: number, items: Array<InlineBlockItem>) 
+         *      properties:
+         *          width: number
+         *          height: number
+         *          textAlign: left | center | right
+         *          vertical-middle: top | center | baseline
+         *      methods:
+         *          align(textAlign: TextAlign)
+         */
+
+        /**
+         *  InlineBlockItem API
+         *  
+         *   InlineBlockItem(element: HTMLElement, width: number, height: number)
+         *      properties:
+         *          width: number
+         *          height: number
+         *      methods:
+         *          setStyle(style: object)
+         *          setWidth(width: number)
+         *          setHeight(height: number)
+         */
+
+        const TextAlign = {
+            LEFT: 0,
+            CENTER: 1,
+            RIGHT: 2,
+        };
+
+        // Layout
+        class InlineBlockLayout {
+            constructor(element, width, height, items) {
+                this.element = element;
+                this.width = width;
+                this.height = height;
+                this.items = items;
+                this.textAlign = TextAlign.LEFT;      
+
+                this.initStyle();
+                this.initItemStyle();
+            }
+            
+            /*
+             * @private
+             */
+            initStyle() {
+                this.element.style.width = `${this.width}px`;
+                this.element.style.height = `${this.height}px`;
+            }
+
+            initItemStyle() {
+                const getLeft = (element) => {
+                    return parseInt(element.style.left);
+                };
+
+                const getTop = (element) => {
+                    return parseInt(element.style.top);
+                };
+
+                this.items.forEach((item, i) => {
+                    // 计算 left
+                    let left = i === 0 ? 0 : this.items[i - 1].width + getLeft(this.items[i - 1].element);
+                    // 计算 top
+                    let top = 0;
+                    const prevItemTop = i === 0 ? 0 : getTop(this.items[i - 1].element);
+                    if (left + item.width > this.width) { // 需要换行
+                        top = prevItemTop + this.items[i - 1].height;
+                        left = 0;
+                    } else {
+                        top = prevItemTop;
+                    }
+
+                    item.setStyle({
+                        position: 'absolute',
+                        left: `${left}px`,
+                        top: `${top}px`,
+                    });
+                });
+            }
+            
+        }
+
+        // LayoutItem
+        class InlineBlockItem {
+            constructor(element, width, height) {
+                this.element = element;
+                this.width = width;
+                this.height = height;
+
+                this.initStyle();
+            }
+
+            /*
+             * @private
+             */
+            initStyle() {
+                this.element.style.width = `${this.width}px`;
+                this.element.style.height = `${this.height}px`;
+            }
+
+            setStyle(style) {
+                for(let k in style) {
+                    this.element.style[k] = style[k];
+                }
+            }
+
+            setWidth(width) {
+                this.width = width;
+                this.setStyle({ width: `${width}px` });
+            }
+
+            setHeight(height) {
+                this.height = height;
+                this.setStyle({ height: `${height}px` });
+            }
+        }
+
+        new InlineBlockLayout(document.querySelector('.container'), 800, 600, [
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[0], 200, 200),
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[1], 200, 200),
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[2], 200, 200),
+            new InlineBlockItem(document.querySelectorAll('.inline-block-item')[3], 250, 200),
+        ]);
+    </script>
+</body>
+</html>
